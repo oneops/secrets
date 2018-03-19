@@ -1,0 +1,175 @@
+########################################################################
+# OneOps Proxy Application config.                                     #
+#                                                                      #
+# See resources/META-INF/additional-spring-configuration-metadata.json #
+# for custom properties added and it's description.                    #
+########################################################################
+
+# App, Audit & Access Log Configuration
+# =====================================
+logging:
+  level:
+    root: INFO
+    com.oneops.proxy: DEBUG
+    org.jooq.tools: INFO
+    com.zaxxer.hikari: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    com.oneops.proxy.keywhiz.http: DEBUG
+  path: log
+  file: keywhiz-proxy
+  audit-file: keywhiz-proxy-audit
+  config: classpath:logback-spring.xml
+logback:
+  access:
+    file: keywhiz-proxy-access
+    config: classpath:logback-access.xml
+debug: false
+
+# Jetty Server & TLS Configuration
+# ================================
+server:
+  address: 0.0.0.0
+  port: 8443
+  compression:
+    enabled: true
+  session:
+    cookie:
+      name: SESSION
+  ssl:
+    enabled: true
+    key-store: classpath:keystores/keywhiz_proxy_keystore.p12
+    key-store-type: pkcs12
+    key-password: changeit
+    key-store-password: changeit
+  use-forward-headers: true
+  jetty:
+    max-http-post-size: 1000000
+
+# Jetty Server ThreadPool Configuration
+# =====================================
+jetty:
+  thread-pool:
+    min-threads: 8
+    max-threads: 200
+    idle-timeout: 60000
+  jmx:
+    enabled: true
+
+# Proxy Configuration
+# ===================
+oneops:
+  base-url: ${ONEOPS_BASE_URL}
+  keywhiz:
+    base-url: https://keywhiz.com:4444/
+    svc-user: ${KEYWHIZ_USER}
+    svc-password: ${KEYWHIZ_PASS}
+    secret-max-size: 100000
+    trust-store:
+      path: classpath:keystores/keywhiz_truststore.p12
+      type: pkcs12
+      store-password: changeit
+    key-store:
+      path: classpath:keystores/keywhiz_keystore.p12
+      type: pkcs12
+      store-password: changeit
+      key-password: changeit
+    cli:
+      version: ${SECRETS_CLI_VERSION:0.0.0}
+      download-path: ${SECRETS_CLI_PATH:/opt/oneops/secrets-cli/secrets}
+  ldap:
+    server: ldap://ldap.com
+    port: 3269
+    user-dn: CN=xxx,DC=xxx,DC=com
+    password: ${LDAP_PASS}
+    user-base-dn: dc=xxx,dc=xxxx,dc=com
+    user-attribute: sAMAccountName
+    role-base-dn:
+    role-attribute: uniqueMember
+    roles[0]:
+    trust-store:
+      path: classpath:keystores/ldap_truststore.p12
+      type: pkcs12
+      store-password: changeit
+  auth:
+    issuer: Keywhiz-Proxy
+    header: X-Authorization
+    token-type: Bearer
+    signing-key: ${SIGNING_KEY}
+    expires-in-sec: 3600
+    compression-enabled: false
+  proxy:
+    enabled: false
+    prefix: /proxy
+    proxy-to: https://httpbin.org/
+    via-host: OneOps Proxy
+    trust-all: true
+
+# Spring datasource Configuration
+# ===============================
+spring:
+  jmx:
+    enabled: true
+    default-domain: oneops
+  jackson.serialization:
+      INDENT_OUTPUT: true
+  datasource:
+    url: ${ONEOPS_DB_URL:jdbc:postgresql://xxxxx.${oneops.base-url}:5432/xxxxx}
+    username: ${ONEOPS_DB_USER}
+    password: ${ONEOPS_DB_PASS}
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+       maximum-pool-size: 5
+       pool-name: keywhiz-proxy
+  jooq:
+    sql-dialect: postgres
+  cache:
+    type: caffeine
+  application:
+      name: OneOps Keywhiz Proxy
+
+# Mgmt app Configuration
+# ======================
+management:
+  context-path: /app
+  security:
+    enabled: false
+    roles: MGMT
+  user: xxxx
+  password: xxxx
+  add-application-context-header: false
+  health:
+    db:
+      enabled: true
+
+banner:
+  location: banner.txt
+
+# Info Endpoint details
+# =====================
+info:
+  name: @project.artifactId@
+  description: @project.description@
+  version: @project.version@
+  build-time: @build.timestamp@
+  secrets-cli-version: ${oneops.keywhiz.cli.version}
+  secrets-cli-path: ${oneops.keywhiz.cli.download-path}
+  transparent-proxy: ${oneops.proxy.enabled}
+  java: ${java.version}
+  java-vendor: ${java.vendor}
+  os-name: ${os.name}
+  os-arch: ${os.arch}
+  os-version: ${os.version}
+
+#security:
+#  user:
+#    role: ADMIN
+#    name: xxxx
+#    password: xxxx
+#
+#endpoints:
+#  env:
+#    keys-to-sanitize:
+#  configprops:
+#    keys-to-sanitize:
+
